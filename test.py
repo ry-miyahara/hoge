@@ -1,3 +1,6 @@
 print("HelloWorld!")
 print("hoge")
-print("")
+
+while(True):
+    print("")
+    break
