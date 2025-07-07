@@ -2,5 +2,5 @@ print("HelloWorld!")
 print("hoge")
 
 while(True):
-    print("")
+    print("a")
     break
