@@ -1,12 +1,19 @@
 class Circle:
-    __pi=3.14
+    def __init__(self,r,name,place):
+        self.r=r
+        self.name=name
+        self.place=place
+        self.__pi=3.14
 
-    def length(self,r):
-        return r*2*Circle.__pi
+    def length(self):
+        print(self.name)
+        return self.r*2*self.__pi
 
-    def area(self,r):
-        return r*r*Circle.__pi
+    def area(self):
+        print(self.place)
+        return self.r*self.r*self.__pi
 
 if __name__ == '__main__':
-    print(Circle().length(1))
-    print(Circle().__pi)
+    maru=Circle(5,"miyah","tokyo")
+    maru.length()
+    maru.area()
