@@ -185,7 +185,7 @@ def setup_run():
         [fsg.Text('実行するセットアップ(txt)を選択')],
         [fsg.Listbox(values=txt_files, size=(40, 8), key='-TXT-', select_mode='extended')],
         [fsg.Text('', size=(40, 2), key='-MSG-', text_color='yellow')],
-        [fsg.Button('実行'), fsg.Button('戻る')]
+        [fsg.Button('実行'), fsg.Button('exe化'), fsg.Button('戻る')]
     ]
     window = fsg.Window('セットアップ実行', layout)
     import sys
@@ -209,6 +209,41 @@ def setup_run():
                     window['-MSG-'].update("選択したtxtにファイルがありません。")
             else:
                 window['-MSG-'].update("txtファイルを選択してください。")
+        elif event == 'exe化':
+            selected = values['-TXT-']
+            if not selected or len(selected) != 1:
+                window['-MSG-'].update('exe化は1つのtxtファイルのみ選択してください。')
+                continue
+            txt_file = selected[0]
+            # exe化用Pythonスクリプトを生成
+            py_code = f'''import os\nimport subprocess\ndef open_files(paths):\n    for path in paths:\n        if os.path.exists(path):\n            try:\n                if path.lower().endswith('.exe'):\n                    subprocess.Popen(path)\n                else:\n                    try:\n                        os.startfile(path)\n                    except AttributeError:\n                        # os.startfileが無い環境(一部PyInstaller exe)用\n                        import subprocess\n                        subprocess.Popen(['cmd', '/c', 'start', '', path], shell=True)\n            except Exception as e:\n                pass\n        else:\n            pass\ndef load_paths_from(txt_path):\n    if not os.path.exists(txt_path):\n        return []\n    with open(txt_path, 'r', encoding='utf-8') as f:\n        return [line.strip() for line in f if line.strip()]\nif __name__ == '__main__':\n    import sys\n    import os\n    if getattr(sys, 'frozen', False):\n        # exeで実行時\n        base_dir = os.path.dirname(sys.executable)\n    else:\n        base_dir = os.path.dirname(os.path.abspath(__file__))\n    txt_path = os.path.join(base_dir, os.path.basename(r"{txt_file}"))\n    paths = load_paths_from(txt_path)\n    open_files(paths)\n'''
+            out_py = os.path.splitext(txt_file)[0] + '_run.py'
+            with open(out_py, 'w', encoding='utf-8') as f:
+                f.write(py_code)
+            window['-MSG-'].update('exe化処理中...しばらくお待ちください。')
+            window.refresh()
+            import subprocess as sp
+            import shutil
+            try:
+                result = sp.run(['pyinstaller', '--onefile', '--noconsole', out_py], capture_output=True, text=True, shell=True)
+                if result.returncode == 0:
+                    exe_name = os.path.splitext(os.path.basename(out_py))[0] + '.exe'
+                    dist_path = os.path.join('dist', exe_name)
+                    # txtファイルをdistに複製
+                    try:
+                        dist_txt = os.path.join('dist', os.path.basename(txt_file))
+                        shutil.copy2(txt_file, dist_txt)
+                    except Exception as e:
+                        window['-MSG-'].update(f'生成成功: {dist_path}\nただしtxt複製でエラー: {e}')
+                        return
+                    if os.path.exists(dist_path):
+                        window['-MSG-'].update(f'生成成功: {dist_path}\n{os.path.basename(txt_file)} も dist に複製しました。')
+                    else:
+                        window['-MSG-'].update('pyinstallerは成功しましたがexeが見つかりません。')
+                else:
+                    window['-MSG-'].update('pyinstallerでエラーが発生しました:\n' + result.stderr)
+            except Exception as e:
+                window['-MSG-'].update(f'pyinstaller実行時にエラー: {e}')
     window.close()
 
 def main():
